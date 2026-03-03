@@ -1,0 +1,83 @@
+{
+    "version": 1,
+    "name": "PlayerControls",
+    "maps": [
+        {
+            "name": "Gameplay",
+            "id": "fd6b7b37-1ac4-45d9-9ba4-452eb6e71de0",
+            "actions": [
+                {
+                    "name": "Accelerate",
+                    "type": "Button",
+                    "id": "0fd2904e-6497-402f-b511-a4b727d1857a",
+                    "expectedControlType": "",
+                    "processors": "",
+                    "interactions": "Hold(pressPoint=0.3)",
+                    "initialStateCheck": false
+                },
+                {
+                    "name": "ChangeDirection",
+                    "type": "Button",
+                    "id": "da527ca6-2c22-4a09-b5eb-615bdabd9ad5",
+                    "expectedControlType": "",
+                    "processors": "",
+                    "interactions": "Tap",
+                    "initialStateCheck": false
+                }
+            ],
+            "bindings": [
+                {
+                    "name": "",
+                    "id": "3a7e9fd8-a9e2-48ed-ad42-233c4c7ef7d2",
+                    "path": "<Keyboard>/space",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "",
+                    "action": "Accelerate",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "",
+                    "id": "59ef4d18-e16d-457f-bea2-b7749fdc3adb",
+                    "path": "<Keyboard>/space",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "",
+                    "action": "ChangeDirection",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                }
+            ]
+        },
+        {
+            "name": "UI",
+            "id": "1ec0ce97-98ac-4271-9816-d8544e1b4220",
+            "actions": [
+                {
+                    "name": "New action",
+                    "type": "Button",
+                    "id": "2e96f021-8990-4a8a-8f98-67e03e5564d8",
+                    "expectedControlType": "",
+                    "processors": "",
+                    "interactions": "",
+                    "initialStateCheck": false
+                }
+            ],
+            "bindings": [
+                {
+                    "name": "",
+                    "id": "1cc98466-e3c5-401c-a5d9-a8e209de001b",
+                    "path": "",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "",
+                    "action": "New action",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                }
+            ]
+        }
+    ],
+    "controlSchemes": []
+}
