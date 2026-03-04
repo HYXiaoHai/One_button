@@ -12,7 +12,7 @@
                     "id": "0fd2904e-6497-402f-b511-a4b727d1857a",
                     "expectedControlType": "",
                     "processors": "",
-                    "interactions": "Hold(pressPoint=0.3)",
+                    "interactions": "Hold(duration=0.3)",
                     "initialStateCheck": false
                 },
                 {
@@ -22,6 +22,24 @@
                     "expectedControlType": "",
                     "processors": "",
                     "interactions": "Tap",
+                    "initialStateCheck": false
+                },
+                {
+                    "name": "Exit",
+                    "type": "Button",
+                    "id": "5f2731aa-3b33-421f-87cb-65339a8762ca",
+                    "expectedControlType": "",
+                    "processors": "",
+                    "interactions": "",
+                    "initialStateCheck": false
+                },
+                {
+                    "name": "MaxSpeed",
+                    "type": "Button",
+                    "id": "8d6ab2b5-e496-4126-8989-50695d3a25a2",
+                    "expectedControlType": "",
+                    "processors": "",
+                    "interactions": "",
                     "initialStateCheck": false
                 }
             ],
@@ -45,6 +63,28 @@
                     "processors": "",
                     "groups": "",
                     "action": "ChangeDirection",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "",
+                    "id": "876b2c96-9799-4c80-ac17-fa2ecb2cf243",
+                    "path": "<Keyboard>/escape",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "",
+                    "action": "Exit",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "",
+                    "id": "6c11eeaa-b811-4110-9521-a5b3d33b6422",
+                    "path": "<Keyboard>/space",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "",
+                    "action": "MaxSpeed",
                     "isComposite": false,
                     "isPartOfComposite": false
                 }

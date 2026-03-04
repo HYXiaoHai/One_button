@@ -98,7 +98,7 @@ public partial class @PlayerControls: IInputActionCollection2, IDisposable
                     ""id"": ""0fd2904e-6497-402f-b511-a4b727d1857a"",
                     ""expectedControlType"": """",
                     ""processors"": """",
-                    ""interactions"": ""Hold(pressPoint=0.3)"",
+                    ""interactions"": ""Hold(duration=0.3)"",
                     ""initialStateCheck"": false
                 },
                 {
@@ -108,6 +108,24 @@ public partial class @PlayerControls: IInputActionCollection2, IDisposable
                     ""expectedControlType"": """",
                     ""processors"": """",
                     ""interactions"": ""Tap"",
+                    ""initialStateCheck"": false
+                },
+                {
+                    ""name"": ""Exit"",
+                    ""type"": ""Button"",
+                    ""id"": ""5f2731aa-3b33-421f-87cb-65339a8762ca"",
+                    ""expectedControlType"": """",
+                    ""processors"": """",
+                    ""interactions"": """",
+                    ""initialStateCheck"": false
+                },
+                {
+                    ""name"": ""MaxSpeed"",
+                    ""type"": ""Button"",
+                    ""id"": ""8d6ab2b5-e496-4126-8989-50695d3a25a2"",
+                    ""expectedControlType"": """",
+                    ""processors"": """",
+                    ""interactions"": """",
                     ""initialStateCheck"": false
                 }
             ],
@@ -131,6 +149,28 @@ public partial class @PlayerControls: IInputActionCollection2, IDisposable
                     ""processors"": """",
                     ""groups"": """",
                     ""action"": ""ChangeDirection"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": false
+                },
+                {
+                    ""name"": """",
+                    ""id"": ""876b2c96-9799-4c80-ac17-fa2ecb2cf243"",
+                    ""path"": ""<Keyboard>/escape"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": """",
+                    ""action"": ""Exit"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": false
+                },
+                {
+                    ""name"": """",
+                    ""id"": ""6c11eeaa-b811-4110-9521-a5b3d33b6422"",
+                    ""path"": ""<Keyboard>/space"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": """",
+                    ""action"": ""MaxSpeed"",
                     ""isComposite"": false,
                     ""isPartOfComposite"": false
                 }
@@ -171,6 +211,8 @@ public partial class @PlayerControls: IInputActionCollection2, IDisposable
         m_Gameplay = asset.FindActionMap("Gameplay", throwIfNotFound: true);
         m_Gameplay_Accelerate = m_Gameplay.FindAction("Accelerate", throwIfNotFound: true);
         m_Gameplay_ChangeDirection = m_Gameplay.FindAction("ChangeDirection", throwIfNotFound: true);
+        m_Gameplay_Exit = m_Gameplay.FindAction("Exit", throwIfNotFound: true);
+        m_Gameplay_MaxSpeed = m_Gameplay.FindAction("MaxSpeed", throwIfNotFound: true);
         // UI
         m_UI = asset.FindActionMap("UI", throwIfNotFound: true);
         m_UI_Newaction = m_UI.FindAction("New action", throwIfNotFound: true);
@@ -257,6 +299,8 @@ public partial class @PlayerControls: IInputActionCollection2, IDisposable
     private List<IGameplayActions> m_GameplayActionsCallbackInterfaces = new List<IGameplayActions>();
     private readonly InputAction m_Gameplay_Accelerate;
     private readonly InputAction m_Gameplay_ChangeDirection;
+    private readonly InputAction m_Gameplay_Exit;
+    private readonly InputAction m_Gameplay_MaxSpeed;
     /// <summary>
     /// Provides access to input actions defined in input action map "Gameplay".
     /// </summary>
@@ -276,6 +320,14 @@ public partial class @PlayerControls: IInputActionCollection2, IDisposable
         /// Provides access to the underlying input action "Gameplay/ChangeDirection".
         /// </summary>
         public InputAction @ChangeDirection => m_Wrapper.m_Gameplay_ChangeDirection;
+        /// <summary>
+        /// Provides access to the underlying input action "Gameplay/Exit".
+        /// </summary>
+        public InputAction @Exit => m_Wrapper.m_Gameplay_Exit;
+        /// <summary>
+        /// Provides access to the underlying input action "Gameplay/MaxSpeed".
+        /// </summary>
+        public InputAction @MaxSpeed => m_Wrapper.m_Gameplay_MaxSpeed;
         /// <summary>
         /// Provides access to the underlying input action map instance.
         /// </summary>
@@ -308,6 +360,12 @@ public partial class @PlayerControls: IInputActionCollection2, IDisposable
             @ChangeDirection.started += instance.OnChangeDirection;
             @ChangeDirection.performed += instance.OnChangeDirection;
             @ChangeDirection.canceled += instance.OnChangeDirection;
+            @Exit.started += instance.OnExit;
+            @Exit.performed += instance.OnExit;
+            @Exit.canceled += instance.OnExit;
+            @MaxSpeed.started += instance.OnMaxSpeed;
+            @MaxSpeed.performed += instance.OnMaxSpeed;
+            @MaxSpeed.canceled += instance.OnMaxSpeed;
         }
 
         /// <summary>
@@ -325,6 +383,12 @@ public partial class @PlayerControls: IInputActionCollection2, IDisposable
             @ChangeDirection.started -= instance.OnChangeDirection;
             @ChangeDirection.performed -= instance.OnChangeDirection;
             @ChangeDirection.canceled -= instance.OnChangeDirection;
+            @Exit.started -= instance.OnExit;
+            @Exit.performed -= instance.OnExit;
+            @Exit.canceled -= instance.OnExit;
+            @MaxSpeed.started -= instance.OnMaxSpeed;
+            @MaxSpeed.performed -= instance.OnMaxSpeed;
+            @MaxSpeed.canceled -= instance.OnMaxSpeed;
         }
 
         /// <summary>
@@ -475,6 +539,20 @@ public partial class @PlayerControls: IInputActionCollection2, IDisposable
         /// <seealso cref="UnityEngine.InputSystem.InputAction.performed" />
         /// <seealso cref="UnityEngine.InputSystem.InputAction.canceled" />
         void OnChangeDirection(InputAction.CallbackContext context);
+        /// <summary>
+        /// Method invoked when associated input action "Exit" is either <see cref="UnityEngine.InputSystem.InputAction.started" />, <see cref="UnityEngine.InputSystem.InputAction.performed" /> or <see cref="UnityEngine.InputSystem.InputAction.canceled" />.
+        /// </summary>
+        /// <seealso cref="UnityEngine.InputSystem.InputAction.started" />
+        /// <seealso cref="UnityEngine.InputSystem.InputAction.performed" />
+        /// <seealso cref="UnityEngine.InputSystem.InputAction.canceled" />
+        void OnExit(InputAction.CallbackContext context);
+        /// <summary>
+        /// Method invoked when associated input action "MaxSpeed" is either <see cref="UnityEngine.InputSystem.InputAction.started" />, <see cref="UnityEngine.InputSystem.InputAction.performed" /> or <see cref="UnityEngine.InputSystem.InputAction.canceled" />.
+        /// </summary>
+        /// <seealso cref="UnityEngine.InputSystem.InputAction.started" />
+        /// <seealso cref="UnityEngine.InputSystem.InputAction.performed" />
+        /// <seealso cref="UnityEngine.InputSystem.InputAction.canceled" />
+        void OnMaxSpeed(InputAction.CallbackContext context);
     }
     /// <summary>
     /// Interface to implement callback methods for all input action callbacks associated with input actions defined by "UI" which allows adding and removing callbacks.
