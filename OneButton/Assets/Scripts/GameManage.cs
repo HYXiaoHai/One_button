@@ -16,18 +16,23 @@ public enum GameState
 public class GameManage : MonoBehaviour
 {
     public static GameManage instance;
-
     public GameState gameState = GameState.None;
-
     public GameObject player;
 
     [Header("计时器")]
     public TMP_Text timeText;
     private float gameTime = 0f;//游戏进行的时间（秒）
+    public int oneTimeScore = 1;
+    [Header("得分")]
+    public int attackScores;//攻击boss获得的分数
+    public TMP_Text scoreText;
+    private int finalTotalScore;//游戏结束时的总分（时间分 + 攻击分）
 
     [Header("排行榜")]
-    [SerializeField] private List<float> leaderboardScores = new List<float>(); // 存储时间（秒），降序排列
-    private const string LeaderboardKey = "Leaderboard"; // PlayerPrefs 键名
+    [SerializeField] private List<int> leaderboardScores = new List<int>(); //存储时间（秒），降序排列
+    private const string LeaderboardKey = "Leaderboard"; //PlayerPrefs键名
+
+    private bool endPanelSkipped = false;
 
     private void Awake()
     {
@@ -39,9 +44,13 @@ public class GameManage : MonoBehaviour
     {
         gameState = GameState.Meniu;
         Time.timeScale = 0f;
+        attackScores = 0;
+        finalTotalScore = 0;
+        UpdateScore();
 
         UIManage.instance.OpenMeniu();
         UIManage.instance.CloseGamePanel();
+        UIManage.instance.CloseEndPanel();
         RefreshLeaderboardUI(); //显示排行榜
     }
 
@@ -61,6 +70,25 @@ public class GameManage : MonoBehaviour
         {
             UpdateTime();
         }
+        // 游戏结束状态下处理空格
+        if (gameState == GameState.End)
+        {
+            if (keyboard.spaceKey.wasPressedThisFrame)
+            {
+                if (!UIManage.instance.IsAnimationFinished())
+                {
+                    // 动画未结束：第一次按下，跳过动画
+                    UIManage.instance.SkipAnimation();
+                    endPanelSkipped = true;
+                }
+                else
+                {
+                    // 动画已结束或已跳过：第二次按下，保存并返回
+                    AddScore(finalTotalScore);
+                    BackMeniu();
+                }
+            }
+        }
 
         // ESC 退出游戏
         if (keyboard.escapeKey.wasPressedThisFrame)
@@ -76,18 +104,29 @@ public class GameManage : MonoBehaviour
         gameTime += Time.deltaTime;
         timeText.text = gameTime.ToString("F1") + "s";
     }
+    //更新攻击得分文本
+    public void UpdateScore()
+    {
+        if (scoreText == null) return;
+        scoreText.text = attackScores.ToString();
+    }
 
     //开始游戏
     public void StartGame()
     {
         gameState = GameState.Start;
-        player.GetComponent<PlayerAttake>().playerHP = 3;
 
         Time.timeScale = 1f;
-
+        //重置血量
+        player.GetComponent<PlayerAttake>().playerHP = 5;
+        UIManage.instance.InitHpUi();
         // 重置计时器
         gameTime = 0f;
         if (timeText != null) timeText.text = "0.0s";
+        //重置分数
+        attackScores = 0;
+        finalTotalScore = 0;
+        UpdateScore();
 
         UIManage.instance.CloseMeniu();
         UIManage.instance.OpenGamePanel();
@@ -98,13 +137,22 @@ public class GameManage : MonoBehaviour
     {
         gameState = GameState.End;
         Time.timeScale = 0f;
+
+        // 计算总分
+        int timeScore = Mathf.FloorToInt(gameTime) * oneTimeScore; // 假设 oneTimeScore 为 1
+        finalTotalScore = timeScore + attackScores;
+
+        // 调用 UIManage 的动画方法（传递原始值）
+        UIManage.instance.OpenEndPanelWithAnimation(gameTime, attackScores, finalTotalScore);
+
+        // 重置跳过标志
+        endPanelSkipped = false;
+
+        UIManage.instance.CloseGamePanel();
+
         Debug.Log("游戏结束，总时间：" + gameTime.ToString("F1") + "秒");
-
-        // 将本次游戏时间加入排行榜
-        AddScore(gameTime);
-
-        BackMeniu();
     }
+
 
     //返回菜单
     public void BackMeniu()
@@ -114,6 +162,7 @@ public class GameManage : MonoBehaviour
 
         UIManage.instance.OpenMeniu();
         UIManage.instance.CloseGamePanel();
+        UIManage.instance.CloseEndPanel();
 
         //刷新排行榜显示
         RefreshLeaderboardUI();
@@ -132,12 +181,12 @@ public class GameManage : MonoBehaviour
                 string[] parts = data.Split(',');
                 foreach (string part in parts)
                 {
-                    if (float.TryParse(part, out float score))
+                    if (int.TryParse(part, out int score))
                         leaderboardScores.Add(score);
                 }
             }
         }
-        //确保降序排列
+        // 确保降序排列
         leaderboardScores = leaderboardScores.OrderByDescending(s => s).ToList();
     }
 
@@ -146,15 +195,15 @@ public class GameManage : MonoBehaviour
     {
         // 只保留前10名
         var top10 = leaderboardScores.Take(10).ToList();
-        string data = string.Join(",", top10.Select(s => s.ToString("F1")));
+        string data = string.Join(",", top10);
         PlayerPrefs.SetString(LeaderboardKey, data);
         PlayerPrefs.Save();
     }
 
     //添加新成绩，自动排序并保留前10
-    public void AddScore(float newTime)
+    public void AddScore(int newTotalScore)
     {
-        leaderboardScores.Add(newTime);
+        leaderboardScores.Add(newTotalScore);
         // 降序排序
         leaderboardScores = leaderboardScores.OrderByDescending(s => s).ToList();
         // 只保留前10

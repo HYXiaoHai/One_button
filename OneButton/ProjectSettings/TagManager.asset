@@ -6,6 +6,8 @@ TagManager:
   tags:
   - Boss
   - button
+  - PlayerBullet
+  - BossBullet
   layers:
   - Default
   - TransparentFX

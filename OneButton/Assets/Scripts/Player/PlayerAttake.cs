@@ -4,7 +4,7 @@ using UnityEngine;
 
 public class PlayerAttake : MonoBehaviour
 {
-    public int playerHP = 3;
+    public int playerHP = 5;
 
     [Header("音效")]
     public AudioSource audioSource;
@@ -13,7 +13,6 @@ public class PlayerAttake : MonoBehaviour
 
     private void OnTriggerEnter2D(Collider2D collision)
     {
-        Debug.Log("受伤");
         if(collision.tag == "button" )
         {
             //玩家受击
@@ -34,6 +33,7 @@ public class PlayerAttake : MonoBehaviour
         else
         {
             playerHP -= 1;
+            UIManage.instance.RemoveHpUi();
             audioSource.PlayOneShot(getDamageClip);
         }
     }
