@@ -3,7 +3,9 @@ using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
 using UnityEngine.InputSystem;
-using System.Linq; // 用于排序
+using System.Linq;
+using Unity.VisualScripting;
+using DG.Tweening;
 
 public enum GameState
 {
@@ -18,11 +20,18 @@ public class GameManage : MonoBehaviour
     public static GameManage instance;
     public GameState gameState = GameState.None;
     public GameObject player;
-
+    public Camera mainCamera;
     [Header("计时器")]
     public TMP_Text timeText;
     private float gameTime = 0f;//游戏进行的时间（秒）
     public int oneTimeScore = 1;
+    [Header("玩家子弹")]
+    public GameObject playerBullet;//子弹预制体
+    public Transform playerBulletFather;//子弹预制体父级
+    public int bulletCount = 3;//在场子弹最大数目
+    public float bulletDuration = 5f;//生成子弹的冷却期
+    private float bulletTimer = 0f;//冷却计时器
+
     [Header("得分")]
     public int attackScores;//攻击boss获得的分数
     public TMP_Text scoreText;
@@ -38,6 +47,7 @@ public class GameManage : MonoBehaviour
     {
         instance = this;
         LoadLeaderboard(); //加载排行榜数据
+        playerBullet = Resources.Load<GameObject>("Models/PlayerBullet");
     }
 
     private void Start()
@@ -69,6 +79,13 @@ public class GameManage : MonoBehaviour
         if (gameState == GameState.Start)
         {
             UpdateTime();
+            // ----- 新增：子弹生成计时器 -----
+            bulletTimer += Time.deltaTime;
+            if (bulletTimer >= bulletDuration)
+            {
+                bulletTimer = 0f;
+                CreatPlayerBullet();
+            }
         }
         // 游戏结束状态下处理空格
         if (gameState == GameState.End)
@@ -110,7 +127,24 @@ public class GameManage : MonoBehaviour
         if (scoreText == null) return;
         scoreText.text = attackScores.ToString();
     }
+    // -------------------- 玩家子弹生成 --------------------
+    public void CreatPlayerBullet()
+    {
+        Debug.Log("生成子弹");
+        float r = player.GetComponent<PlayerMove>().radius;//获得移动半径
+        int count = Random.Range(1, bulletCount+1);//获得此次生成的数目
+        for(int i =0;i<count;i++)
+        {
+            int Angle = Random.Range(0, 360);//获得随机角度
+            float x = Mathf.Cos(Angle)*r;
+            float y = Mathf.Sin(Angle)*r;
+            Vector3 offset = new Vector3(x, y,0);
+            GameObject go = Instantiate(playerBullet, playerBulletFather);
+            go.transform.position = offset;//移到位置
+        }
+    }
 
+    // -------------------- 游戏阶段更新 --------------------
     //开始游戏
     public void StartGame()
     {
@@ -130,6 +164,9 @@ public class GameManage : MonoBehaviour
 
         UIManage.instance.CloseMeniu();
         UIManage.instance.OpenGamePanel();
+
+        //生成
+        bulletTimer = 0f;
     }
 
     //游戏结束
@@ -169,7 +206,7 @@ public class GameManage : MonoBehaviour
     }
 
     // -------------------- 排行榜功能 --------------------
-    //加载排行榜数据（从 PlayerPrefs）
+    //加载排行榜数据
     private void LoadLeaderboard()
     {
         leaderboardScores.Clear();
