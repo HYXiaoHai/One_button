@@ -9,19 +9,22 @@ public class PlayerBullet : MonoBehaviour
     public Transform boss;
     public int scores = 5;//得分
     public bool canMove;
+
+    public AudioClip audio;
+    public AudioSource audioSource;
+   
     private void Start()
     {
-        // 添加动画：移动到目标位置并缩放至正常大小
-        float animDuration = 0.3f;                       // 动画时长
-        //float delay = i * 0.05f;                          // 延迟，使子弹依次出现
+        float animDuration = 0.3f;                     
 
        transform.DOScale(transform.localScale, animDuration)
             //.SetDelay(delay)
-            .SetEase(Ease.OutBack);                      // 弹性缩放效果
+            .SetEase(Ease.OutBack);                    
     }
     private void Awake()
     {
         boss = GameObject.Find("Boss").transform;
+        audioSource = GetComponent<AudioSource>();
     }
     private void Update()
     {
@@ -34,8 +37,11 @@ public class PlayerBullet : MonoBehaviour
     {
         if (other.tag == "Boss")//攻击boss
         {
-            GameManage.instance.attackScores += scores;
-            GameManage.instance.UpdateScore();
+            Boss.instance.GetDamage();
+            //GameManage.instance.attackScores += scores;
+            Debug.Log("子弹碰撞" + scores);
+            GameManage.instance.AddAttackScore(scores);
+            audioSource.PlayOneShot(audio);
             StartCoroutine(DestroyBullet());
         }
         if (other.tag=="Player")

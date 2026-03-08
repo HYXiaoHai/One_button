@@ -8,14 +8,14 @@ public class UIManage : MonoBehaviour
     public static UIManage instance;
 
     public CanvasGroup meniuPanel;
-    public CanvasGroup gamePanel;
-    public CanvasGroup endPanel;
     [Header("游戏面板")]
+    public CanvasGroup gamePanel;
     public GameObject healthFather;
     public Queue<GameObject> hpS = new Queue<GameObject>();
     public GameObject hpPrefabs;
 
     [Header("结束面板")]
+    public CanvasGroup endPanel;
     //实际用于动画的数值
     public float targetTimeScore;
     public int targetAttackScore;
@@ -78,7 +78,6 @@ public class UIManage : MonoBehaviour
             }
         }
     }
-    // 打开结束面板并启动动画
     // 打开结束面板并启动动画
     public void OpenEndPanelWithAnimation(float timeScore, int attackScore, int finalScore)
     {

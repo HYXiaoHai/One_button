@@ -205,6 +205,35 @@ public class PlayerMove : MonoBehaviour
             transform.up = directionToCenter.normalized;
         }
     }
+    //重置状态
+    public void ResetPlayer()
+    {
+        //停止可能正在进行的转向协程
+        if (turnCoroutine != null)
+        {
+            StopCoroutine(turnCoroutine);
+            turnCoroutine = null;
+        }
+
+        //重置方向
+        direction = 1;
+
+        //重置速度相关
+        currentSpeed = moveSpeed;
+        targetSpeed = moveSpeed;
+        isAccelerating = false;
+        isMaxSpeedMode = false;
+        storedSpeed = moveSpeed;
+
+        //重置双击检测时间
+        lastPressTime = 0f;
+
+        //根据当前位置重新计算角度（确保与位置一致）
+        Vector3 offset = transform.position - center;
+        currentAngle = Mathf.Atan2(offset.y, offset.x);
+        //强制更新旋转，使玩家指向圆心
+        UpdateRotation();
+    }
 
     #region 调试
     private void OnDrawGizmosSelected()

@@ -35,6 +35,8 @@ public class GameManage : MonoBehaviour
     [Header("得分")]
     public int attackScores;//攻击boss获得的分数
     public TMP_Text scoreText;
+    [Header("得分弹出")]
+    public TMP_Text addScoreText;
     private int finalTotalScore;//游戏结束时的总分（时间分 + 攻击分）
 
     [Header("排行榜")]
@@ -122,11 +124,39 @@ public class GameManage : MonoBehaviour
         timeText.text = gameTime.ToString("F1") + "s";
     }
     //更新攻击得分文本
+    public void AddAttackScore(int addScore)
+    {
+        Debug.Log("增加分数"+ addScore);
+        StartCoroutine(UpdateAddAttackScoreText(addScore));
+    }
+    /// <summary>
+    //////////////////////////////////////////////////////////////////////////////////////// bug
+    /// </summary>
+    /// <param name="addScore"></param>
+    /// <returns></returns>
+    IEnumerator UpdateAddAttackScoreText(int addScore)
+    {
+        int num = 0;
+        addScoreText.text = "+"+addScore.ToString();
+        addScoreText.enabled = true;
+        yield return new WaitForSeconds(0.5f);
+        while (addScore>0)
+        {
+            addScore--;
+            attackScores++;
+            addScoreText.text = "+" + addScore.ToString();
+            UpdateScore();
+            yield return new WaitForSeconds(0.1f);
+        }
+        addScoreText.enabled = false;
+    }
+    
     public void UpdateScore()
     {
         if (scoreText == null) return;
         scoreText.text = attackScores.ToString();
     }
+    
     // -------------------- 玩家子弹生成 --------------------
     public void CreatPlayerBullet()
     {
@@ -151,17 +181,22 @@ public class GameManage : MonoBehaviour
         gameState = GameState.Start;
 
         Time.timeScale = 1f;
-        //重置血量
-        player.GetComponent<PlayerAttake>().playerHP = 5;
+        //重置玩家移动状态（方向、速度等）
+        player.GetComponent<PlayerMove>().ResetPlayer();
+        //重置玩家血量状态（血量、受击冷却、显示）
+        player.GetComponent<PlayerAttake>().ResetPlayerHP();
+        //重置 UI 血量显示
         UIManage.instance.InitHpUi();
-        // 重置计时器
+        //重置计时器
         gameTime = 0f;
         if (timeText != null) timeText.text = "0.0s";
         //重置分数
         attackScores = 0;
         finalTotalScore = 0;
         UpdateScore();
-
+        //重置音乐
+        //MusicManage.instance.Replay();
+        //更改ui
         UIManage.instance.CloseMeniu();
         UIManage.instance.OpenGamePanel();
 
@@ -173,10 +208,12 @@ public class GameManage : MonoBehaviour
     public void GameEnd()
     {
         gameState = GameState.End;
-        Time.timeScale = 0f;
+        //Time.timeScale = 0f;
+        //隐藏玩家
+        player.SetActive(false);
 
         // 计算总分
-        int timeScore = Mathf.FloorToInt(gameTime) * oneTimeScore; // 假设 oneTimeScore 为 1
+        int timeScore = Mathf.FloorToInt(gameTime) * oneTimeScore; //oneTimeScore为1
         finalTotalScore = timeScore + attackScores;
 
         // 调用 UIManage 的动画方法（传递原始值）
@@ -194,9 +231,25 @@ public class GameManage : MonoBehaviour
     //返回菜单
     public void BackMeniu()
     {
+        //获取圆心和半径
+        PlayerMove playerMove = player.GetComponent<PlayerMove>();
+        float radius = playerMove.radius;
+        Vector3 center = playerMove.centerPoint.position; // 圆心世界坐标
+
+        //1.重置玩家位置到圆心正上方
+        player.transform.position = center + new Vector3(0, radius, 0);
+        player.SetActive(true);
+
+        //2.重置玩家移动状态（方向、速度等）
+        player.GetComponent<PlayerMove>().ResetPlayer();
+
+        //3.重置玩家血量状态（血量、受击冷却、显示）
+        player.GetComponent<PlayerAttake>().ResetPlayerHP();
+        //4.切换游戏状态和 UI
         gameState = GameState.Meniu;
         Time.timeScale = 0f;
-
+        //重置音乐
+        MusicManage.instance.Replay();
         UIManage.instance.OpenMeniu();
         UIManage.instance.CloseGamePanel();
         UIManage.instance.CloseEndPanel();
