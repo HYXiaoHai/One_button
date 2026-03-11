@@ -37,6 +37,7 @@ public class PlayerBullet : MonoBehaviour
     {
         if (other.tag == "Boss")//¹¥»÷boss
         {
+
             Boss.instance.GetDamage();
             //GameManage.instance.attackScores += scores;
             Debug.Log("×Óµ¯Åö×²" + scores);

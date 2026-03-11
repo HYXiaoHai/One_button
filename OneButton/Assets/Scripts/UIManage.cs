@@ -1,7 +1,9 @@
+using DG.Tweening;
 using System.Collections;
 using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
+using UnityEngine.UI;
 
 public class UIManage : MonoBehaviour
 {
@@ -13,7 +15,7 @@ public class UIManage : MonoBehaviour
     public GameObject healthFather;
     public Queue<GameObject> hpS = new Queue<GameObject>();
     public GameObject hpPrefabs;
-
+    public Image injuredImage;
     [Header("结束面板")]
     public CanvasGroup endPanel;
     //实际用于动画的数值
@@ -33,6 +35,7 @@ public class UIManage : MonoBehaviour
     [Header("排行榜")]
     public GameObject leaderboardPanel;//排行榜面板（可选）
     public TMP_Text[] leaderboardEntries;//长度为10的文本数组
+    public Image hightImage;
 
 
     private void Awake()
@@ -61,21 +64,55 @@ public class UIManage : MonoBehaviour
        
     }
 
+    //受伤
+    public void Injured()
+    {
+        StartCoroutine(InjuredAni());
+    }
+
+    IEnumerator InjuredAni()
+    {
+        //动态变透明
+        injuredImage.DOFade(1f, 0.6f);
+        yield return new WaitForSeconds(0.2f);
+        injuredImage.DOFade(0f, 0.6f);
+
+    }
+
     //更新排行榜显示
-    public void UpdateLeaderboardDisplay(List<int> scores)
+    public void UpdateLeaderboardDisplay(List<int> scores,int lastScore)
     {
         for (int i = 0; i < leaderboardEntries.Length; i++)
         {
             if (i < scores.Count)
             {
-                // 格式：排名.  总分  （例如 "1.  156"）
-                leaderboardEntries[i].text = $"{i + 1}.  -- {scores[i]}";
+                // 格式：排名.  总分  （例如 "1.--156"）
+                leaderboardEntries[i].text = $"{i + 1}.  --  {scores[i]}";
+                //高光提示
+                if (scores[i] == lastScore&&hightImage==null)
+                {
+                    hightImage = leaderboardEntries[i].GetComponentInChildren<Image>();
+                    hightImage.enabled = true;
+                }
             }
             else
             {
                 // 空位显示 "--"
                 leaderboardEntries[i].text = $"{i + 1}.  --";
             }
+        }
+    }
+    //排行榜面板，用来高光上一把的成绩
+    public void CloseHighlightBoard()
+    {
+        if(hightImage == null)
+        {
+            return;
+        }
+        else
+        {
+            hightImage.enabled = false;
+            hightImage = null;
         }
     }
     // 打开结束面板并启动动画

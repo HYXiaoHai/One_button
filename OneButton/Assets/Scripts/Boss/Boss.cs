@@ -6,8 +6,8 @@ using DG.Tweening;
 public class Boss : MonoBehaviour
 {
     public static Boss instance;
-
     [Header("µ¯Ä»")]
+    public Transform bossBulletFather;
     public GameObject bossBullet;
     public float bulletSpeed =5f;
     public Vector3 bulletDirection;
@@ -21,10 +21,7 @@ public class Boss : MonoBehaviour
         instance = this;
         bossBullet = Resources.Load<GameObject>("Models/BossBullet");
     }
-    private void Start()
-    {
-        
-    }
+
     private void Update()
     {
         timer += Time.deltaTime;
@@ -37,7 +34,7 @@ public class Boss : MonoBehaviour
     }
     public void GetBulletDirection()
     {
-        float r = Random.Range(0, 361);
+        float r = Random.Range(0, 360);
         float x = Mathf.Cos(r);
         float y = Mathf.Sin(r);
         bulletDirection = new Vector3(x, y, 0).normalized;
@@ -46,6 +43,15 @@ public class Boss : MonoBehaviour
     public void GetDamage()
     {
         StartCoroutine(Damage());
+        StartCoroutine(HitStop());
+
+    }
+    IEnumerator HitStop()
+    {
+        Camera.main.DOShakePosition(0.1f, 0.2f, 10, 90);
+        Time.timeScale = 0.5f;
+        yield return new WaitForSecondsRealtime(0.1f);
+        Time.timeScale = 1f;
     }
     IEnumerator Damage()
     {
@@ -68,6 +74,7 @@ public class Boss : MonoBehaviour
     public void Attect()
     {
         BossBullet bullet = Instantiate(bossBullet,transform.position,Quaternion.identity).GetComponent<BossBullet>();
+        bullet.transform.SetParent(bossBulletFather);
         bullet.Init(bulletSpeed,bulletDirection);
     }
 }

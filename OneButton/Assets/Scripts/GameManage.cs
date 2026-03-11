@@ -1,17 +1,19 @@
+using DG.Tweening;
+using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using TMPro;
+using Unity.VisualScripting;
 using UnityEngine;
 using UnityEngine.InputSystem;
-using System.Linq;
-using Unity.VisualScripting;
-using DG.Tweening;
 
 public enum GameState
 {
     None,
     Meniu,//开始界面
     Start,//游戏开始
+    Stop,//游戏暂停
     End//游戏结束
 }
 
@@ -35,10 +37,14 @@ public class GameManage : MonoBehaviour
     [Header("得分")]
     public int attackScores;//攻击boss获得的分数
     public TMP_Text scoreText;
-    [Header("得分弹出")]
-    public TMP_Text addScoreText;
     private int finalTotalScore;//游戏结束时的总分（时间分 + 攻击分）
 
+    [Header("得分弹出")]
+    public TMP_Text addScoreText;
+    public float addScoreCold = 0.5f;//加分冷却
+    private int pendingTotalScore = 0;//冷却期内累计的待加分数
+    private Coroutine pendingScoreCoroutine;//冷却等待协程
+    private Coroutine scoreAnimCoroutine;//分数动画协程
     [Header("排行榜")]
     [SerializeField] private List<int> leaderboardScores = new List<int>(); //存储时间（秒），降序排列
     private const string LeaderboardKey = "Leaderboard"; //PlayerPrefs键名
@@ -112,6 +118,13 @@ public class GameManage : MonoBehaviour
         // ESC 退出游戏
         if (keyboard.escapeKey.wasPressedThisFrame)
         {
+            //游戏模式下
+            //打开退出面板
+            //再次确认
+            //删除本局数据
+
+            //meniu下
+            //直接退出
             OnExit();
         }
     }
@@ -123,33 +136,69 @@ public class GameManage : MonoBehaviour
         gameTime += Time.deltaTime;
         timeText.text = gameTime.ToString("F1") + "s";
     }
+
     //更新攻击得分文本
     public void AddAttackScore(int addScore)
     {
-        Debug.Log("增加分数"+ addScore);
-        StartCoroutine(UpdateAddAttackScoreText(addScore));
-    }
-    /// <summary>
-    //////////////////////////////////////////////////////////////////////////////////////// bug
-    /// </summary>
-    /// <param name="addScore"></param>
-    /// <returns></returns>
-    IEnumerator UpdateAddAttackScoreText(int addScore)
-    {
-        int num = 0;
-        addScoreText.text = "+"+addScore.ToString();
-        addScoreText.enabled = true;
-        yield return new WaitForSeconds(0.5f);
-        while (addScore>0)
+        //如果已有动画正在执行，立即停止（因为我们要重新累计）
+        if (scoreAnimCoroutine != null)
         {
-            addScore--;
+            StopCoroutine(scoreAnimCoroutine);
+            scoreAnimCoroutine = null;
+        }
+        //累加分数
+        
+        pendingTotalScore += addScore;
+        //动画
+        //1.缩放脉冲：先放大到 1.5 倍，然后回弹
+        addScoreText.transform.DOPunchScale(Vector3.one * 0.5f, 0.2f, 5, 1f);
+        //2.向上脉冲：向上移动 30 像素并回弹
+        addScoreText.transform.DOPunchPosition(Vector3.up * 15f, 0.2f, 5, 1f);
+        //3.透明度脉冲：快速闪一下（前提是文本本身支持透明度）
+        addScoreText.DOFade(0.8f, 0.1f).From(1f).SetLoops(2, LoopType.Yoyo);
+        // ---------------------------------
+
+        //更新显示文本（显示当前累计值）
+        addScoreText.text = "+" + pendingTotalScore.ToString();
+        addScoreText.enabled = true;
+
+        //重置冷却等待协程（如果已有，先取消）
+        if (pendingScoreCoroutine != null)
+        {
+            StopCoroutine(pendingScoreCoroutine);
+        }
+        //开始新的冷却等待
+        pendingScoreCoroutine = StartCoroutine(WaitForCoolDownAndAnimate());
+    }
+
+    IEnumerator WaitForCoolDownAndAnimate()
+    {
+        //等待冷却时间
+        yield return new WaitForSeconds(addScoreCold);
+
+        //冷却结束，如果还有待加分数，则开始动画
+        if (pendingTotalScore > 0)
+        {
+            scoreAnimCoroutine = StartCoroutine(AnimateScoreAddition());
+        }
+        pendingScoreCoroutine = null; //冷却协程结束
+    }
+
+    IEnumerator AnimateScoreAddition()
+    {
+        while (pendingTotalScore > 0)
+        {
+            pendingTotalScore--;
             attackScores++;
-            addScoreText.text = "+" + addScore.ToString();
+            addScoreText.text = "+" + pendingTotalScore.ToString();
             UpdateScore();
             yield return new WaitForSeconds(0.1f);
         }
+
         addScoreText.enabled = false;
+        scoreAnimCoroutine = null;
     }
+
     
     public void UpdateScore()
     {
@@ -162,15 +211,24 @@ public class GameManage : MonoBehaviour
     {
         Debug.Log("生成子弹");
         float r = player.GetComponent<PlayerMove>().radius;//获得移动半径
-        int count = Random.Range(1, bulletCount+1);//获得此次生成的数目
+        int count = UnityEngine.Random.Range(1, bulletCount+1);//获得此次生成的数目
         for(int i =0;i<count;i++)
         {
-            int Angle = Random.Range(0, 360);//获得随机角度
+            int Angle = UnityEngine.Random.Range(0, 360);//获得随机角度
             float x = Mathf.Cos(Angle)*r;
             float y = Mathf.Sin(Angle)*r;
             Vector3 offset = new Vector3(x, y,0);
             GameObject go = Instantiate(playerBullet, playerBulletFather);
             go.transform.position = offset;//移到位置
+            //go.transform.SetParent(playerBulletFather);
+        }
+    }
+    public void ClearPlayerBullet()
+    {
+        // 遍历父物体下的所有子物体并销毁
+        foreach (Transform child in playerBulletFather)
+        {
+            Destroy(child.gameObject);
         }
     }
 
@@ -185,6 +243,8 @@ public class GameManage : MonoBehaviour
         player.GetComponent<PlayerMove>().ResetPlayer();
         //重置玩家血量状态（血量、受击冷却、显示）
         player.GetComponent<PlayerAttake>().ResetPlayerHP();
+        //开启拖尾
+        player.GetComponent<PlayerMove>().playerTril.enabled = true;
         //重置 UI 血量显示
         UIManage.instance.InitHpUi();
         //重置计时器
@@ -194,8 +254,15 @@ public class GameManage : MonoBehaviour
         attackScores = 0;
         finalTotalScore = 0;
         UpdateScore();
+        // 重置得分累计动画状态
+        pendingTotalScore = 0;
+        if (pendingScoreCoroutine != null) { StopCoroutine(pendingScoreCoroutine); pendingScoreCoroutine = null; }
+        if (scoreAnimCoroutine != null) { StopCoroutine(scoreAnimCoroutine); scoreAnimCoroutine = null; }
+        addScoreText.enabled = false;
         //重置音乐
         //MusicManage.instance.Replay();
+        //重置玩家子弹
+        ClearPlayerBullet();
         //更改ui
         UIManage.instance.CloseMeniu();
         UIManage.instance.OpenGamePanel();
@@ -209,6 +276,8 @@ public class GameManage : MonoBehaviour
     {
         gameState = GameState.End;
         //Time.timeScale = 0f;
+        //关闭拖尾
+        player.GetComponent<PlayerMove>().playerTril.enabled = false;
         //隐藏玩家
         player.SetActive(false);
 
@@ -248,12 +317,21 @@ public class GameManage : MonoBehaviour
         //4.切换游戏状态和 UI
         gameState = GameState.Meniu;
         Time.timeScale = 0f;
+        //重置玩家子弹
+        ClearPlayerBullet();
+        //重置得分累计动画状态（与 StartGame 相同）
+        pendingTotalScore = 0;
+        if (pendingScoreCoroutine != null) { StopCoroutine(pendingScoreCoroutine); pendingScoreCoroutine = null; }
+        if (scoreAnimCoroutine != null) { StopCoroutine(scoreAnimCoroutine); scoreAnimCoroutine = null; }
+        addScoreText.enabled = false;
+
         //重置音乐
         MusicManage.instance.Replay();
+        //ui
         UIManage.instance.OpenMeniu();
         UIManage.instance.CloseGamePanel();
         UIManage.instance.CloseEndPanel();
-
+        UIManage.instance.CloseHighlightBoard();
         //刷新排行榜显示
         RefreshLeaderboardUI();
     }
@@ -316,7 +394,7 @@ public class GameManage : MonoBehaviour
     {
         if (UIManage.instance != null)
         {
-            UIManage.instance.UpdateLeaderboardDisplay(leaderboardScores);
+            UIManage.instance.UpdateLeaderboardDisplay(leaderboardScores,finalTotalScore);
         }
     }
 

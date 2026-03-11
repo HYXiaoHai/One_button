@@ -22,7 +22,6 @@ public class PlayerAttake : MonoBehaviour
     public AudioSource audioSource;
     public AudioClip getDamageClip;
 
-
     private void OnTriggerEnter2D(Collider2D collision)
     {
         if(collision.tag == "button" )
@@ -31,11 +30,13 @@ public class PlayerAttake : MonoBehaviour
             PlayerGetDamage();
         }
     }
+
     private void Start()
     {
         sr = GetComponent<SpriteRenderer>();
         oldColor = sr.color;
     }
+
     private void Update()
     {
         if(!canGetDamage)
@@ -46,8 +47,8 @@ public class PlayerAttake : MonoBehaviour
                 canGetDamage = true;
             }
         }
-
     }
+
     public void PlayerGetDamage()
     {
         if(playerHP-1<0|| !canGetDamage)
@@ -57,6 +58,7 @@ public class PlayerAttake : MonoBehaviour
         if (playerHP - 1 == 0)
         {
             audioSource.PlayOneShot(getDamageClip);
+            UIManage.instance.RemoveHpUi();
             GameManage.instance.GameEnd();
         }
         else
@@ -66,10 +68,12 @@ public class PlayerAttake : MonoBehaviour
             StartCoroutine(GetDamage());
             playerHP -= 1;
             UIManage.instance.RemoveHpUi();
-            GameManage.instance.mainCamera.DOShakePosition(duration, strength, vibrato, 80,true,ShakeRandomnessMode.Full);
+            UIManage.instance.Injured();
+            //GameManage.instance.mainCamera.DOShakePosition(duration, strength, vibrato, 80,true,ShakeRandomnessMode.Full);
             audioSource.PlayOneShot(getDamageClip);
         }
     }
+
     public void ResetPlayerHP()
     {
         //重置血量（使用与 GameManage 一致的初始值，建议用变量管理）
@@ -83,17 +87,21 @@ public class PlayerAttake : MonoBehaviour
             sr.color = new Color(oldColor.r, oldColor.g, oldColor.b, 1f);
         }
     }
+
     IEnumerator GetDamage()
     {
-        sr.color = new Color(oldColor.r, oldColor.g, oldColor.b, 0f);
+        //sr.color = new Color(oldColor.r, oldColor.g, oldColor.b, 0f);
+        sr.color = new Color(1, 98/255f, 0, 1f);
         yield return new WaitForSeconds(0.1f);
         sr.color = new Color(oldColor.r, oldColor.g, oldColor.b, 1f);
         yield return new WaitForSeconds(0.1f);
-        sr.color = new Color(oldColor.r, oldColor.g, oldColor.b, 0f);
+        //sr.color = new Color(oldColor.r, oldColor.g, oldColor.b, 0f);
+        sr.color = new Color(1, 98 / 255f, 0, 1f);
         yield return new WaitForSeconds(0.1f);
         sr.color = new Color(oldColor.r, oldColor.g, oldColor.b, 1f);
         yield return new WaitForSeconds(0.1f);
-        sr.color = new Color(oldColor.r, oldColor.g, oldColor.b, 0f);
+        //sr.color = new Color(oldColor.r, oldColor.g, oldColor.b, 0f);
+        sr.color = new Color(1, 98 / 255f, 0, 1f);
         yield return new WaitForSeconds(0.1f);
         sr.color = new Color(oldColor.r, oldColor.g, oldColor.b, 1f);
     }
