@@ -31,6 +31,8 @@ public class UIManage : MonoBehaviour
     private Coroutine animationCoroutine;
     private bool isAnimating = false;
     private bool animationSkipped = false;
+    [Header("暂停面板")]
+    public CanvasGroup StopPanel;
 
     [Header("排行榜")]
     public GameObject leaderboardPanel;//排行榜面板（可选）
@@ -245,5 +247,17 @@ public class UIManage : MonoBehaviour
         endPanel.alpha = 0;
         endPanel.interactable = false;
         endPanel.blocksRaycasts = false;
+    }
+    public void OpenStopPanel()
+    {
+        StopPanel.alpha = 1;
+        StopPanel.interactable = true;
+        StopPanel.blocksRaycasts = true;
+    }
+    public void CloseStopPanel()
+    {
+        StopPanel.alpha = 0;
+        StopPanel.interactable = false;
+        StopPanel.blocksRaycasts = false;
     }
 }

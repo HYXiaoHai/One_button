@@ -75,58 +75,140 @@ public class GameManage : MonoBehaviour
     private void Update()
     {
         var keyboard = Keyboard.current;
-        // 菜单状态下按空格开始游戏
-        if (gameState == GameState.Meniu)
+        // 菜单状态下按空格开始游戏 
+        // 处理游戏状态相关的按键
+        switch (gameState)
         {
-            if (keyboard.spaceKey.wasPressedThisFrame)
-            {
-                StartGame();
-            }
-        }
-        // 游戏进行中，更新计时器
-        if (gameState == GameState.Start)
-        {
-            UpdateTime();
-            // ----- 新增：子弹生成计时器 -----
-            bulletTimer += Time.deltaTime;
-            if (bulletTimer >= bulletDuration)
-            {
-                bulletTimer = 0f;
-                CreatPlayerBullet();
-            }
-        }
-        // 游戏结束状态下处理空格
-        if (gameState == GameState.End)
-        {
-            if (keyboard.spaceKey.wasPressedThisFrame)
-            {
-                if (!UIManage.instance.IsAnimationFinished())
-                {
-                    // 动画未结束：第一次按下，跳过动画
-                    UIManage.instance.SkipAnimation();
-                    endPanelSkipped = true;
-                }
-                else
-                {
-                    // 动画已结束或已跳过：第二次按下，保存并返回
-                    AddScore(finalTotalScore);
-                    BackMeniu();
-                }
-            }
-        }
+            case GameState.Meniu:
+                if (keyboard.spaceKey.wasPressedThisFrame)
+                    StartGame();
+                if (keyboard.escapeKey.wasPressedThisFrame)
+                    OnExit(); // 菜单界面直接退出
+                break;
 
-        // ESC 退出游戏
-        if (keyboard.escapeKey.wasPressedThisFrame)
-        {
-            //游戏模式下
-            //打开退出面板
-            //再次确认
-            //删除本局数据
+            case GameState.Start:
+                //游戏进行中的逻辑（计时、子弹生成等）
+                UpdateTime();
+                bulletTimer += Time.deltaTime;
+                if (bulletTimer >= bulletDuration)
+                {
+                    bulletTimer = 0f;
+                    CreatPlayerBullet();
+                }
+                //按下 ESC 暂停游戏
+                if(keyboard.escapeKey.wasPressedThisFrame)
+                    GameStop();
+                break;
 
-            //meniu下
-            //直接退出
-            OnExit();
+            case GameState.Stop:
+                //暂停状态：按 ESC 恢复游戏，其他键忽略
+                if(keyboard.escapeKey.wasPressedThisFrame)
+                    OnExit();//esc退出游戏
+                if(keyboard.spaceKey.wasPressedThisFrame)
+                    ResumeGame();//调用恢复方法
+                break;
+
+            case GameState.End:
+                //结束状态：空格跳过动画或返回菜单，ESC 保存并退出
+                if (keyboard.spaceKey.wasPressedThisFrame)
+                {
+                    if (!UIManage.instance.IsAnimationFinished())
+                    {
+                        UIManage.instance.SkipAnimation();
+                        endPanelSkipped = true;
+                    }
+                    else
+                    {
+                        AddScore(finalTotalScore);
+                        BackMeniu();
+                    }
+                }
+                if (keyboard.escapeKey.wasPressedThisFrame)
+                {
+                    AddScore(finalTotalScore); // 保存分数
+                    OnExit();
+                }
+                break;
         }
+        //if (gameState == GameState.Meniu)
+        //{
+        //    if (keyboard.spaceKey.wasPressedThisFrame)
+        //    {
+        //        StartGame();
+        //    }
+        //}
+        //// 游戏进行中，更新计时器
+        //if (gameState == GameState.Start)
+        //{
+        //    UpdateTime();
+        //    // ----- 新增：子弹生成计时器 -----
+        //    bulletTimer += Time.deltaTime;
+        //    if (bulletTimer >= bulletDuration)
+        //    {
+        //        bulletTimer = 0f;
+        //        CreatPlayerBullet();
+        //    }
+        //}
+        //// 游戏结束状态下处理空格
+        //if (gameState == GameState.End)
+        //{
+        //    if (keyboard.spaceKey.wasPressedThisFrame)
+        //    {
+        //        if (!UIManage.instance.IsAnimationFinished())
+        //        {
+        //            // 动画未结束：第一次按下，跳过动画
+        //            UIManage.instance.SkipAnimation();
+        //            endPanelSkipped = true;
+        //        }
+        //        else
+        //        {
+        //            // 动画已结束或已跳过：第二次按下，保存并返回
+        //            AddScore(finalTotalScore);
+        //            BackMeniu();
+        //        }
+        //    }
+        //}
+
+        ////退出游戏功能
+        //if ( gameState == GameState.Stop)
+        //{
+        //    if(keyboard.escapeKey.wasPressedThisFrame)
+        //    {
+        //        //暂停模式下再次摁esc
+        //        //关闭面板 继续游戏
+        //        gameState = GameState.Start;
+        //        Time.timeScale = 1f;//开始
+        //        UIManage.instance.CloseStopPanel();//弹出暂停面板
+        //    }
+        //    else if(keyboard.spaceKey.wasPressedThisFrame)
+        //    {
+        //        //按下空格键执行退出游戏机制
+        //        //删除本局数据
+
+        //        //退出
+        //        OnExit();
+        //    }
+        //}
+        //// ESC 退出游戏
+        //if (keyboard.escapeKey.wasPressedThisFrame&&gameState ==GameState.Start)
+        //{
+        //    //游戏模式下
+        //    GameStop();
+        //}
+        //else if (keyboard.escapeKey.wasPressedThisFrame &&( gameState == GameState.End|| gameState == GameState.Meniu))
+        //{
+        //    //结束模式退出，保存当前数据，然后直接退出
+        //    if (gameState == GameState.End)
+        //    {
+        //        AddScore(finalTotalScore);
+        //        OnExit();
+        //    }
+        //    //meniu模式退出，直接退出
+        //    if(gameState == GameState.Meniu)
+        //    {
+        //        OnExit();
+        //    }
+        //}
     }
 
     //更新计时器文本
@@ -281,22 +363,36 @@ public class GameManage : MonoBehaviour
         //隐藏玩家
         player.SetActive(false);
 
-        // 计算总分
+        //计算总分
         int timeScore = Mathf.FloorToInt(gameTime) * oneTimeScore; //oneTimeScore为1
         finalTotalScore = timeScore + attackScores;
 
-        // 调用 UIManage 的动画方法（传递原始值）
+        //调用 UIManage 的动画方法（传递原始值）
         UIManage.instance.OpenEndPanelWithAnimation(gameTime, attackScores, finalTotalScore);
 
-        // 重置跳过标志
+        //重置跳过标志
         endPanelSkipped = false;
 
         UIManage.instance.CloseGamePanel();
 
         Debug.Log("游戏结束，总时间：" + gameTime.ToString("F1") + "秒");
     }
+    //游戏暂停
+    public void GameStop()
+    {
+        gameState = GameState.Stop;
+        Time.timeScale = 0f;//暂停
+        UIManage.instance.OpenStopPanel();//弹出暂停面板
 
-
+    }
+    //返回游戏
+    public void ResumeGame()
+    {
+        gameState = GameState.Start;
+        Time.timeScale = 1f;
+        UIManage.instance.CloseStopPanel(); // 需要你在 UIManage 中实现
+                                            // 可选：重新启用玩家输入（如果 PlayerMove 的 Action Map 是动态启用的，无需额外操作）
+    }
     //返回菜单
     public void BackMeniu()
     {
@@ -399,12 +495,11 @@ public class GameManage : MonoBehaviour
     }
 
     //esc退出游戏
-    private void OnExit()
+    public void OnExit()
     {
         Debug.Log("退出游戏");
 
 #if UNITY_EDITOR
-        // 在编辑器中停止运行前恢复时间缩放（避免编辑器卡住）
         Time.timeScale = 1f;
         UnityEditor.EditorApplication.isPlaying = false;
 #else
