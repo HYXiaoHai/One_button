@@ -25,7 +25,7 @@ public class PlayerMove : MonoBehaviour
     private Vector3 center;
 
     private PlayerControls actions;//按键检测
-    private int direction = 1;//移动方向 用来转向
+    public int direction = 1;//移动方向 用来转向
     private float currentAngle;//当前角度
 
     //速度相关变量

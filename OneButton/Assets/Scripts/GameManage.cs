@@ -45,6 +45,7 @@ public class GameManage : MonoBehaviour
     private int pendingTotalScore = 0;//冷却期内累计的待加分数
     private Coroutine pendingScoreCoroutine;//冷却等待协程
     private Coroutine scoreAnimCoroutine;//分数动画协程
+    private Transform oldAddScoreTextTransform;
     [Header("排行榜")]
     [SerializeField] private List<int> leaderboardScores = new List<int>(); //存储时间（秒），降序排列
     private const string LeaderboardKey = "Leaderboard"; //PlayerPrefs键名
@@ -70,6 +71,8 @@ public class GameManage : MonoBehaviour
         UIManage.instance.CloseGamePanel();
         UIManage.instance.CloseEndPanel();
         RefreshLeaderboardUI(); //显示排行榜
+
+        oldAddScoreTextTransform = addScoreText.transform;
     }
 
     private void Update()
@@ -232,6 +235,8 @@ public class GameManage : MonoBehaviour
         
         pendingTotalScore += addScore;
         //动画
+        //
+        addScoreText.transform.DOScale(oldAddScoreTextTransform.localScale,0.1f);
         //1.缩放脉冲：先放大到 1.5 倍，然后回弹
         addScoreText.transform.DOPunchScale(Vector3.one * 0.5f, 0.2f, 5, 1f);
         //2.向上脉冲：向上移动 30 像素并回弹
@@ -415,6 +420,8 @@ public class GameManage : MonoBehaviour
         Time.timeScale = 0f;
         //重置玩家子弹
         ClearPlayerBullet();
+        //重置boss子弹
+        Boss.instance.ClearPlayerBullet();
         //重置得分累计动画状态（与 StartGame 相同）
         pendingTotalScore = 0;
         if (pendingScoreCoroutine != null) { StopCoroutine(pendingScoreCoroutine); pendingScoreCoroutine = null; }
