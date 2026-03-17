@@ -4,9 +4,12 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using TMPro;
+using Unity.Burst.Intrinsics;
 using Unity.VisualScripting;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.InputSystem;
+using UnityEngine.UI;
 
 public enum GameState
 {
@@ -22,7 +25,11 @@ public class GameManage : MonoBehaviour
     public static GameManage instance;
     public GameState gameState = GameState.None;
     public GameObject player;
+    public GameObject aim;
     public Camera mainCamera;
+    private SpriteRenderer aimSR;
+    private SpriteRenderer playerSR;
+
     [Header("计时器")]
     public TMP_Text timeText;
     private float gameTime = 0f;//游戏进行的时间（秒）
@@ -45,18 +52,34 @@ public class GameManage : MonoBehaviour
     private int pendingTotalScore = 0;//冷却期内累计的待加分数
     private Coroutine pendingScoreCoroutine;//冷却等待协程
     private Coroutine scoreAnimCoroutine;//分数动画协程
-    private Transform oldAddScoreTextTransform;
+    private Vector3 originalScale;
+    private Vector3 originalPosition;
+
     [Header("排行榜")]
     [SerializeField] private List<int> leaderboardScores = new List<int>(); //存储时间（秒），降序排列
     private const string LeaderboardKey = "Leaderboard"; //PlayerPrefs键名
 
+    [Header("重置数据库")]
+    public Button resetLeaderButton;
+    public Image progressbar;
+    public float progressbarTime = 1.5f;
+    private Coroutine holdCoroutine; // 用于控制长按协程
+
     private bool endPanelSkipped = false;
+    [Header("玩家出生")]
+
+
+    [Header("游戏胜利")]
+    //在类中添加一个标志防止多次触发胜利
+    private bool hasVictoryTriggered = false;
 
     private void Awake()
     {
         instance = this;
         LoadLeaderboard(); //加载排行榜数据
         playerBullet = Resources.Load<GameObject>("Models/PlayerBullet");
+        aimSR = aim.GetComponent<SpriteRenderer>();
+        playerSR = player.GetComponent<SpriteRenderer>();
     }
 
     private void Start()
@@ -72,7 +95,36 @@ public class GameManage : MonoBehaviour
         UIManage.instance.CloseEndPanel();
         RefreshLeaderboardUI(); //显示排行榜
 
-        oldAddScoreTextTransform = addScoreText.transform;
+        originalScale = addScoreText.transform.localScale;
+        originalPosition = addScoreText.transform.localPosition;
+
+        //按钮监听
+        if (resetLeaderButton != null)
+        {
+            EventTrigger trigger = resetLeaderButton.GetComponent<EventTrigger>();
+
+            trigger.triggers.Clear();
+
+            //按下
+            EventTrigger.Entry pointerDown = new EventTrigger.Entry();
+            pointerDown.eventID = EventTriggerType.PointerDown;
+            pointerDown.callback.AddListener((data) => { OnResetButtonDown(); });
+            trigger.triggers.Add(pointerDown);
+
+            //抬起
+            EventTrigger.Entry pointUp = new EventTrigger.Entry();
+            pointUp.eventID = EventTriggerType.PointerUp;
+            pointUp.callback.AddListener((data) =>
+            {
+                OnResetButtonUp();
+            });
+            trigger.triggers.Add(pointUp);
+        }
+        // 初始化进度条（默认隐藏或为0）
+        if (progressbar != null)
+        {
+            progressbar.fillAmount = 0f;
+        }
     }
 
     private void Update()
@@ -98,16 +150,24 @@ public class GameManage : MonoBehaviour
                     bulletTimer = 0f;
                     CreatPlayerBullet();
                 }
+                //游戏胜利机制
+                if (!hasVictoryTriggered && MusicManage.instance.bgmSource != null &&
+                !MusicManage.instance.bgmSource.isPlaying &&
+                 MusicManage.instance.bgmSource.time >= MusicManage.instance.bgmSource.clip.length - 0.1f)
+                {
+                    hasVictoryTriggered = true;
+                    StartCoroutine(VictorySequence());
+                }
                 //按下 ESC 暂停游戏
-                if(keyboard.escapeKey.wasPressedThisFrame)
+                if (keyboard.escapeKey.wasPressedThisFrame)
                     GameStop();
                 break;
 
             case GameState.Stop:
                 //暂停状态：按 ESC 恢复游戏，其他键忽略
-                if(keyboard.escapeKey.wasPressedThisFrame)
+                if (keyboard.escapeKey.wasPressedThisFrame)
                     OnExit();//esc退出游戏
-                if(keyboard.spaceKey.wasPressedThisFrame)
+                if (keyboard.spaceKey.wasPressedThisFrame)
                     ResumeGame();//调用恢复方法
                 break;
 
@@ -133,85 +193,6 @@ public class GameManage : MonoBehaviour
                 }
                 break;
         }
-        //if (gameState == GameState.Meniu)
-        //{
-        //    if (keyboard.spaceKey.wasPressedThisFrame)
-        //    {
-        //        StartGame();
-        //    }
-        //}
-        //// 游戏进行中，更新计时器
-        //if (gameState == GameState.Start)
-        //{
-        //    UpdateTime();
-        //    // ----- 新增：子弹生成计时器 -----
-        //    bulletTimer += Time.deltaTime;
-        //    if (bulletTimer >= bulletDuration)
-        //    {
-        //        bulletTimer = 0f;
-        //        CreatPlayerBullet();
-        //    }
-        //}
-        //// 游戏结束状态下处理空格
-        //if (gameState == GameState.End)
-        //{
-        //    if (keyboard.spaceKey.wasPressedThisFrame)
-        //    {
-        //        if (!UIManage.instance.IsAnimationFinished())
-        //        {
-        //            // 动画未结束：第一次按下，跳过动画
-        //            UIManage.instance.SkipAnimation();
-        //            endPanelSkipped = true;
-        //        }
-        //        else
-        //        {
-        //            // 动画已结束或已跳过：第二次按下，保存并返回
-        //            AddScore(finalTotalScore);
-        //            BackMeniu();
-        //        }
-        //    }
-        //}
-
-        ////退出游戏功能
-        //if ( gameState == GameState.Stop)
-        //{
-        //    if(keyboard.escapeKey.wasPressedThisFrame)
-        //    {
-        //        //暂停模式下再次摁esc
-        //        //关闭面板 继续游戏
-        //        gameState = GameState.Start;
-        //        Time.timeScale = 1f;//开始
-        //        UIManage.instance.CloseStopPanel();//弹出暂停面板
-        //    }
-        //    else if(keyboard.spaceKey.wasPressedThisFrame)
-        //    {
-        //        //按下空格键执行退出游戏机制
-        //        //删除本局数据
-
-        //        //退出
-        //        OnExit();
-        //    }
-        //}
-        //// ESC 退出游戏
-        //if (keyboard.escapeKey.wasPressedThisFrame&&gameState ==GameState.Start)
-        //{
-        //    //游戏模式下
-        //    GameStop();
-        //}
-        //else if (keyboard.escapeKey.wasPressedThisFrame &&( gameState == GameState.End|| gameState == GameState.Meniu))
-        //{
-        //    //结束模式退出，保存当前数据，然后直接退出
-        //    if (gameState == GameState.End)
-        //    {
-        //        AddScore(finalTotalScore);
-        //        OnExit();
-        //    }
-        //    //meniu模式退出，直接退出
-        //    if(gameState == GameState.Meniu)
-        //    {
-        //        OnExit();
-        //    }
-        //}
     }
 
     //更新计时器文本
@@ -225,6 +206,15 @@ public class GameManage : MonoBehaviour
     //更新攻击得分文本
     public void AddAttackScore(int addScore)
     {
+
+        // 终止所有正在进行的动画并重置状态
+        addScoreText.transform.DOKill(); // 终止缩放/移动动画
+        addScoreText.DOKill(); // 终止透明度动画
+                               // 恢复到原始状态
+        addScoreText.transform.localScale = originalScale; // 原始缩放
+        addScoreText.transform.localPosition = originalPosition; // 原始位置
+        addScoreText.color = new Color(addScoreText.color.r, addScoreText.color.g, addScoreText.color.b, 1f); // 不透明
+
         //如果已有动画正在执行，立即停止（因为我们要重新累计）
         if (scoreAnimCoroutine != null)
         {
@@ -232,11 +222,9 @@ public class GameManage : MonoBehaviour
             scoreAnimCoroutine = null;
         }
         //累加分数
-        
+
         pendingTotalScore += addScore;
         //动画
-        //
-        addScoreText.transform.DOScale(oldAddScoreTextTransform.localScale,0.1f);
         //1.缩放脉冲：先放大到 1.5 倍，然后回弹
         addScoreText.transform.DOPunchScale(Vector3.one * 0.5f, 0.2f, 5, 1f);
         //2.向上脉冲：向上移动 30 像素并回弹
@@ -286,27 +274,27 @@ public class GameManage : MonoBehaviour
         scoreAnimCoroutine = null;
     }
 
-    
+
     public void UpdateScore()
     {
         if (scoreText == null) return;
         scoreText.text = attackScores.ToString();
     }
-    
+
     // -------------------- 玩家子弹生成 --------------------
     public void CreatPlayerBullet()
     {
         Debug.Log("生成子弹");
         float r = player.GetComponent<PlayerMove>().radius;//获得移动半径
-        int count = UnityEngine.Random.Range(1, bulletCount+1);//获得此次生成的数目
-        for(int i =0;i<count;i++)
+        int count = UnityEngine.Random.Range(1, bulletCount + 1);//获得此次生成的数目
+        for (int i = 0; i < count; i++)
         {
             int Angle = UnityEngine.Random.Range(0, 360);//获得随机角度
-            float x = Mathf.Cos(Angle)*r;
-            float y = Mathf.Sin(Angle)*r;
-            Vector3 offset = new Vector3(x, y,0);
+            float x = Mathf.Cos(Angle) * r;
+            float y = Mathf.Sin(Angle) * r;
+            Vector3 offset = new Vector3(x, y, 0);
             GameObject go = Instantiate(playerBullet, playerBulletFather);
-            go.transform.position = offset;//移到位置
+            go.transform.position = offset + player.GetComponent<PlayerMove>().centerPoint.position;//移到位置
             //go.transform.SetParent(playerBulletFather);
         }
     }
@@ -324,15 +312,19 @@ public class GameManage : MonoBehaviour
     public void StartGame()
     {
         gameState = GameState.Start;
-
+        hasVictoryTriggered = false;
         Time.timeScale = 1f;
         //重置玩家移动状态（方向、速度等）
+        // === 渐显：aim 和 player 在 1 秒内变为不透明 ===
+        aimSR.DOFade(1f, 1f);
+        playerSR.DOFade(1f, 1f);
         player.GetComponent<PlayerMove>().ResetPlayer();
         //重置玩家血量状态（血量、受击冷却、显示）
         player.GetComponent<PlayerAttake>().ResetPlayerHP();
         //开启拖尾
         player.GetComponent<PlayerMove>().playerTril.enabled = true;
         //重置 UI 血量显示
+        UIManage.instance.ClearAllHpUI();
         UIManage.instance.InitHpUi();
         //重置计时器
         gameTime = 0f;
@@ -347,9 +339,13 @@ public class GameManage : MonoBehaviour
         if (scoreAnimCoroutine != null) { StopCoroutine(scoreAnimCoroutine); scoreAnimCoroutine = null; }
         addScoreText.enabled = false;
         //重置音乐
-        //MusicManage.instance.Replay();
+        MusicManage.instance.Replay();
         //重置玩家子弹
         ClearPlayerBullet();
+        //重置boss大小
+        Boss.instance.transform.DOScale(1.552349f,1f);
+        Boss.instance.transform.DORotate(new Vector3(0f, 0f, 360f), 1f, RotateMode.LocalAxisAdd);
+        Boss.instance.time = 4f;
         //更改ui
         UIManage.instance.CloseMeniu();
         UIManage.instance.OpenGamePanel();
@@ -388,6 +384,8 @@ public class GameManage : MonoBehaviour
         gameState = GameState.Stop;
         Time.timeScale = 0f;//暂停
         UIManage.instance.OpenStopPanel();//弹出暂停面板
+                                          // 暂停背景音乐
+        MusicManage.instance.Pause();
 
     }
     //返回游戏
@@ -396,7 +394,9 @@ public class GameManage : MonoBehaviour
         gameState = GameState.Start;
         Time.timeScale = 1f;
         UIManage.instance.CloseStopPanel(); // 需要你在 UIManage 中实现
-                                            // 可选：重新启用玩家输入（如果 PlayerMove 的 Action Map 是动态启用的，无需额外操作）
+                                            // 可选：重新启用玩家输入（如果 PlayerMove 的 Action Map 是动态启用的，无需额外操
+        // 恢复背景音乐
+        MusicManage.instance.Resume();
     }
     //返回菜单
     public void BackMeniu()
@@ -405,6 +405,9 @@ public class GameManage : MonoBehaviour
         PlayerMove playerMove = player.GetComponent<PlayerMove>();
         float radius = playerMove.radius;
         Vector3 center = playerMove.centerPoint.position; // 圆心世界坐标
+        // 清除血量UI（菜单界面不显示，但确保下次游戏时没有残留）
+        UIManage.instance.ClearAllHpUI();
+        aim.GetComponent<SpriteRenderer>().DOFade(0f, 0.1f);
 
         //1.重置玩家位置到圆心正上方
         player.transform.position = center + new Vector3(0, radius, 0);
@@ -415,6 +418,10 @@ public class GameManage : MonoBehaviour
 
         //3.重置玩家血量状态（血量、受击冷却、显示）
         player.GetComponent<PlayerAttake>().ResetPlayerHP();
+        aimSR.DOKill();          // 终止可能残留的动画
+        playerSR.DOKill();
+        aimSR.DOFade(0f, 0.2f).SetUpdate(true);
+        playerSR.DOFade(0f, 0.2f).SetUpdate(true);
         //4.切换游戏状态和 UI
         gameState = GameState.Meniu;
         Time.timeScale = 0f;
@@ -422,6 +429,8 @@ public class GameManage : MonoBehaviour
         ClearPlayerBullet();
         //重置boss子弹
         Boss.instance.ClearPlayerBullet();
+        Boss.instance.transform.localScale = new Vector3(3.217089f, 3.217089f, 3.217089f);
+        Boss.instance.transform.eulerAngles = new Vector3(0, 0, 0);
         //重置得分累计动画状态（与 StartGame 相同）
         pendingTotalScore = 0;
         if (pendingScoreCoroutine != null) { StopCoroutine(pendingScoreCoroutine); pendingScoreCoroutine = null; }
@@ -438,7 +447,18 @@ public class GameManage : MonoBehaviour
         //刷新排行榜显示
         RefreshLeaderboardUI();
     }
+    IEnumerator VictorySequence()
+    {
+        // 先加50分奖励
+        attackScores += 50;
+        UpdateScore(); // 更新UI显示
 
+        // 停止Boss攻击并播放胜利动画（等待动画完成）
+        yield return Boss.instance.VictoryAnimation();
+
+        // 动画结束后，调用游戏结束
+        GameEnd();
+    }
     // -------------------- 排行榜功能 --------------------
     //加载排行榜数据
     private void LoadLeaderboard()
@@ -497,9 +517,69 @@ public class GameManage : MonoBehaviour
     {
         if (UIManage.instance != null)
         {
-            UIManage.instance.UpdateLeaderboardDisplay(leaderboardScores,finalTotalScore);
+            UIManage.instance.UpdateLeaderboardDisplay(leaderboardScores, finalTotalScore);
         }
     }
+    private void OnResetButtonDown()
+    {
+        // 只在菜单状态下允许重置
+        if (gameState != GameState.Meniu) return;
+
+        // 如果已有协程在运行，先停止
+        if (holdCoroutine != null)
+            StopCoroutine(holdCoroutine);
+        //
+        if (progressbar != null)
+        {
+            progressbar.fillAmount = 0f;
+        }
+        holdCoroutine = StartCoroutine(HoldToReset());
+
+    }
+    private void OnResetButtonUp()
+    {
+        // 如果协程还在运行（未完成），取消重置
+        if (holdCoroutine != null)
+        {
+            StopCoroutine(holdCoroutine);
+            holdCoroutine = null;
+        }
+
+        // 隐藏/重置进度条
+        if (progressbar != null)
+        {
+            progressbar.fillAmount = 0f;
+        }
+    }
+    IEnumerator HoldToReset()
+    {
+        float timer = 0f;
+        float duration = progressbarTime;
+        while (timer < duration)
+        {
+            // 如果游戏状态不再是菜单，提前取消
+            if (gameState != GameState.Meniu)
+            {
+                OnResetButtonUp(); // 清理并退出
+                yield break;
+            }
+
+            timer += Time.unscaledDeltaTime;
+            if (progressbar != null)
+                progressbar.fillAmount = timer / duration;
+            yield return null;
+        }
+        // 长按完成，执行重置
+        ResetLeaderboard();
+
+        // 重置进度条
+        if (progressbar != null)
+        {
+            progressbar.fillAmount = 0f;
+        }
+        holdCoroutine = null;
+    }
+
 
     //esc退出游戏
     public void OnExit()

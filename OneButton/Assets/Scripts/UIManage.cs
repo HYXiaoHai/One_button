@@ -38,7 +38,8 @@ public class UIManage : MonoBehaviour
     public GameObject leaderboardPanel;//排行榜面板（可选）
     public TMP_Text[] leaderboardEntries;//长度为10的文本数组
     public Image hightImage;
-
+    [Header("人员名单")]
+    public CanvasGroup renyuanPanel;
 
     private void Awake()
     {
@@ -52,8 +53,7 @@ public class UIManage : MonoBehaviour
     public void InitHpUi()
     {
         int hp = GameManage.instance.player.GetComponent<PlayerAttake>().playerHP;
-
-        for(int i =0;i<hp; i++)
+        for (int i =0;i<hp; i++)
         {
             GameObject go = Instantiate(hpPrefabs, healthFather.transform);
             hpS.Enqueue(go);
@@ -62,10 +62,18 @@ public class UIManage : MonoBehaviour
     public void RemoveHpUi()
     {
         GameObject go = hpS.Dequeue();
+        if(go != null )
         Destroy(go);
        
     }
-
+    public void ClearAllHpUI()
+    {
+        while (hpS.Count > 0)
+        {
+            GameObject go = hpS.Dequeue();
+            Destroy(go);
+        }
+    }
     //受伤
     public void Injured()
     {
@@ -259,5 +267,17 @@ public class UIManage : MonoBehaviour
         StopPanel.alpha = 0;
         StopPanel.interactable = false;
         StopPanel.blocksRaycasts = false;
+    }
+    public void OpenRenyuanPanel()
+    {
+        renyuanPanel.alpha = 1;
+        renyuanPanel.interactable = true;
+        renyuanPanel.blocksRaycasts = true;
+    }
+    public void CloseRenyuanPanel()
+    {
+        renyuanPanel.alpha = 0;
+        renyuanPanel.interactable = false;
+        renyuanPanel.blocksRaycasts = false;
     }
 }

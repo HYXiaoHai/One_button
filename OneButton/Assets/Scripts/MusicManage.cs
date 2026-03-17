@@ -17,7 +17,7 @@ public class MusicManage : MonoBehaviour
         if (bgmAudioClip != null)
         {
             bgmSource.clip = bgmAudioClip;
-            bgmSource.loop = true;      // 默认循环播放
+            bgmSource.loop = false;      // 默认循环播放
             bgmSource.Play();
         }
     }
@@ -28,9 +28,29 @@ public class MusicManage : MonoBehaviour
         {
             return;
         }
-        //设置片段并重新播放
+        if(GameManage.instance.gameState==GameState.Meniu)
+        {
+            bgmSource.loop = true;
+        }
+        else
+        {
+            bgmSource.loop = false;
+        }
+        bgmSource.Stop();
         bgmSource.clip = bgmAudioClip;
-        bgmSource.Stop();//停止当前播放
-        bgmSource.Play();//从头开始播放
+        bgmSource.Play();
+    }
+    // 暂停 BGM
+    public void Pause()
+    {
+        if (bgmSource.isPlaying)
+            bgmSource.Pause();
+    }
+
+    // 恢复 BGM
+    public void Resume()
+    {
+        if (!bgmSource.isPlaying && bgmSource.clip != null)
+            bgmSource.UnPause();
     }
 }

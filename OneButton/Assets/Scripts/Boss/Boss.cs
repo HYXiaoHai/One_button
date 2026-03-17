@@ -61,12 +61,37 @@ public class Boss : MonoBehaviour
             StartCoroutine(ExecuteAttackState(currentAttackState));
             attackParameter += Random.Range(1f, 2f);
             if (attackParameter > 5f) attackParameter %= 5f;
+            AddDifficult();
         }
     }
+    private void StartAttackEffect()
+    {
+        // 停止可能残留的动画，并重置状态
+        transform.DOKill();
+        transform.rotation = Quaternion.identity;
 
+        // 放大到1.1倍（0.2秒完成，之后保持）
+        transform.DOScale(1.65f, 0.2f).SetEase(Ease.OutQuad);
+
+        // 绕Z轴持续旋转（每秒360度，无限循环）
+        transform.DORotate(new Vector3(0, 0, 360), 1.3f, RotateMode.LocalAxisAdd)
+            .SetLoops(-1, LoopType.Restart)
+            .SetEase(Ease.Linear);
+    }
+
+    //停止攻击特效：停止所有动画，恢复原始大小和角度
+    private void StopAttackEffect()
+    {
+        
+        transform.DOKill();
+        transform.DOScale(1.552349f, 0.2f).SetEase(Ease.OutQuad);
+        transform.rotation = Quaternion.identity;
+    }
     private IEnumerator ExecuteAttackState(int state)
     {
         isAttacking = true;
+        // === 新增：攻击开始特效 ===
+        StartAttackEffect();
         // 停止当前可能正在播放的音频
         if (bossAudio.isPlaying) bossAudio.Stop();
         // 根据状态设置并播放音频
@@ -229,7 +254,7 @@ public class Boss : MonoBehaviour
                 yield return new WaitForSeconds(waitAfterFire3);
                 break;
             case 4:
-                float warningDuration = 60f / bpm;   // 预警时长（一拍）
+                float warningDuration = 120f / bpm;   // 预警时长（一拍）
                 float attackDuration = 60f / bpm;    // 攻击碰撞时长（一拍）
 
                 // 随机旋转角度
@@ -245,7 +270,7 @@ public class Boss : MonoBehaviour
                 collSector.enabled = false;
 
                 // 快速放大出现（0.2秒内完成）
-                sectorBullet.transform.DOScale(1.2f, 0.2f);
+                sectorBullet.transform.DOScale(1.5f, 0.2f);
 
                 srSector.DOFade(0.2f, 0.2f);
 
@@ -275,9 +300,20 @@ public class Boss : MonoBehaviour
         // 攻击结束，停止音频
         if (bossAudio.isPlaying) 
             bossAudio.Stop();
+        StopAttackEffect();
         isAttacking = false;
     }
-
+    public void AddDifficult()
+    {
+        if(time<=1f)
+        {
+            time = 1f;
+        }
+        else
+        {
+            time -= 0.1f;
+        }
+    }
     public void GetBulletDirection()
     {
         float r = Random.Range(0, 360);
@@ -337,5 +373,30 @@ public class Boss : MonoBehaviour
         {
             Destroy(child.gameObject);
         }
+    }
+    public void StopAllAttacks()
+    {
+        if (bossAudio.isPlaying) bossAudio.Stop();
+        StopAllCoroutines(); // 停止所有攻击协程
+        isAttacking = true;  // 阻止新的攻击（Update中会检查isAttacking）
+                             // 清理扇形（如果存在）
+                             // === 新增：停止攻击特效 ===
+        StopAttackEffect();
+        if (sectorBullet != null)
+        {
+            sectorBullet.GetComponent<SpriteRenderer>().DOFade(0f, 0.2f);
+            sectorBullet.GetComponent<PolygonCollider2D>().enabled = false;
+            sectorBullet.transform.DOScale(0f, 0.2f);
+        }
+     
+    }
+
+    // 胜利动画协程（自身缩放到0）
+    public IEnumerator VictoryAnimation()
+    {
+        // 停止所有攻击
+        StopAllAttacks();
+        // 播放自身缩放到0的动画
+        yield return transform.DOScale(0f, 1f).SetEase(Ease.InBack).WaitForCompletion();
     }
 }
